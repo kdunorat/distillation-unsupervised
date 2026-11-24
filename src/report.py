@@ -13,8 +13,11 @@ Outputs
 import argparse
 import json
 
+import sys
+
 import matplotlib
-matplotlib.use("Agg")
+if "ipykernel" not in sys.modules:      # headless when run as a script; inline in notebooks
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -226,11 +229,8 @@ def collapse_table():
         pd.DataFrame(rows).to_csv(C.RESULTS / "collapse_checks.csv", index=False)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--proj", choices=["umap", "tsne"], default="umap")
-    ap.add_argument("--proj-size", default="S")
-    a = ap.parse_args()
+def run(proj="umap", proj_size="S"):
+    """Builds every table and figure. Callable from a notebook."""
     df = load_probes()
     s = summarize(df)
     gap = paired_gap(df)
@@ -239,8 +239,16 @@ def main():
     fig_label_efficiency(s)
     fig_gap_vs_params(gap)
     fig_ablation(gap)
-    fig_projection(a.proj_size, 0, a.proj)
+    fig_projection(proj_size, 0, proj)
     print(f"[report] figures in {C.FIGS}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--proj", choices=["umap", "tsne"], default="umap")
+    ap.add_argument("--proj-size", default="S")
+    a = ap.parse_args()
+    run(a.proj, a.proj_size)
 
 
 if __name__ == "__main__":

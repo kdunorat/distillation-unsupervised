@@ -43,23 +43,18 @@ def collapse_check(model, x_tr, y_tr, diag_idx):
     return diagnose(f[:cut], y[:cut], f[cut:], y[cut:])
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--row", choices=["B", "C"], required=True)
-    ap.add_argument("--size", choices=list(C.SIZES), required=True)
-    ap.add_argument("--seed", type=int, required=True)
-    ap.add_argument("--data-frac", type=float, default=1.0)
-    ap.add_argument("--epochs", type=int, default=C.EPOCHS)
-    ap.add_argument("--batch", type=int, default=C.BATCH)
-    ap.add_argument("--lr", type=float, default=C.LR)
-    ap.add_argument("--wd", type=float, default=C.WD)
-    a = ap.parse_args()
-
+def train(row, size, seed, data_frac=1.0, epochs=None, batch=None, lr=None, wd=None):
+    """Trains one student (row B or C). Callable from a notebook; returns the run dir.
+    Skips if already finished, resumes from the last epoch if interrupted."""
+    from types import SimpleNamespace
+    a = SimpleNamespace(row=row, size=size, seed=seed, data_frac=data_frac,
+                        epochs=epochs or C.EPOCHS, batch=batch or C.BATCH,
+                        lr=lr or C.LR, wd=wd if wd is not None else C.WD)
     name = C.tag(a.row, a.size, a.seed, a.data_frac)
     out = C.RUNS / name
     out.mkdir(parents=True, exist_ok=True)
     if (out / "backbone.pt").exists():
-        print(f"[{name}] already finished, skipping"); return
+        print(f"[{name}] already finished, skipping"); return out
 
     # ---------------- data: cached views (+ teacher targets for C), nested subset
     views = np.load(C.CACHE / f"views_{C.IMG_SIZE}.npy", mmap_mode="r")
@@ -174,6 +169,21 @@ def main():
     torch.save(model.state_dict(), out / "backbone.pt")      # projector is discarded
     (out / "last.pt").unlink()
     print(f"[{name}] done in {train_seconds / 60:.1f} min")
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--row", choices=["B", "C"], required=True)
+    ap.add_argument("--size", choices=list(C.SIZES), required=True)
+    ap.add_argument("--seed", type=int, required=True)
+    ap.add_argument("--data-frac", type=float, default=1.0)
+    ap.add_argument("--epochs", type=int, default=C.EPOCHS)
+    ap.add_argument("--batch", type=int, default=C.BATCH)
+    ap.add_argument("--lr", type=float, default=C.LR)
+    ap.add_argument("--wd", type=float, default=C.WD)
+    a = ap.parse_args()
+    train(a.row, a.size, a.seed, a.data_frac, a.epochs, a.batch, a.lr, a.wd)
 
 
 if __name__ == "__main__":
