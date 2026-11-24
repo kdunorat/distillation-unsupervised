@@ -81,8 +81,10 @@ initialization (row A uses that same initialization). Projectors: VICReg expande
 
 **Probes.** L2-normalize → StandardScaler fitted on train-split features. k-NN
 (cosine, k = min(20, smallest class count in the subset)); LinearSVC; RBF SVC
-(subsampled to 10,000 above that size). C and γ chosen once by 3-fold CV inside the
-train split on `B_S_s0_d100` at 100% labels, then frozen for every encoder.
+(subsampled to 10,000 above that size, so 50% and 100% labels are equivalent for it).
+C and γ chosen once by 3-fold CV inside the train split on `B_S_s0_d100` at 100% labels
+(grids: linear C ∈ {0.001, 0.01, 0.1, 1}; RBF C ∈ {0.1, 1, 10, 100}, γ = m/d with
+m ∈ {0.5, 1, 2, 4, 8}), then frozen for every encoder.
 k-means (k = 9) NMI/ARI and UMAP on test features, same parameters for all encoders.
 
 **Collapse checks.** Every 10 epochs and at the end of each training: k-NN accuracy,
@@ -96,6 +98,23 @@ teacher vs VICReg student). Probe capacity differs with feature dimension (128 /
 pretraining cost: quote it from the DINO paper (Caron et al., 2021) — **TODO: fill in
 GPU-hours for ViT-S/16** — and add the teacher-forward GPU-hours from
 `cache/views_meta.json`.
+
+## Extensions (`notebooks/extensions.ipynb`)
+
+Beyond the required study; same code, same probes, results land in the same `results/`
+and `figures/`.
+
+- **Row P — raw pixels:** no encoder; the image resized to 32×32 and flattened (3072-d)
+  goes through the same L2 + StandardScaler + probes. Separates what row A gets from the
+  architecture from what is already in the pixels.
+- **Extra student sizes (stretch goal):** M = ×1.0 (2.8 M params) and XL = ×1.8
+  (9.1 M) of the same family, main comparison only (100% unlabeled data, 2 seeds, no
+  ablation), so the C − B gap vs. parameters has four points. Declared in `src/config.py`:
+
+```python
+EXTRA_SIZES = {"M": 1.0, "XL": 1.8}
+EXTRA_SEEDS = {"M": [0, 1], "XL": [0, 1]}
+```
 
 ## Required ablation
 

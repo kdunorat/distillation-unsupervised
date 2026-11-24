@@ -27,8 +27,8 @@ from .diag import l2n
 
 HP_PATH = C.RESULTS / "probe_hparams.json"
 LIN_GRID = [0.001, 0.01, 0.1, 1.0]
-RBF_C_GRID = [1.0, 10.0, 100.0]
-RBF_GAMMA_MULT = [0.5, 1.0, 2.0]          # gamma = mult / n_features (features are standardized)
+RBF_C_GRID = [0.1, 1.0, 10.0, 100.0]
+RBF_GAMMA_MULT = [0.5, 1.0, 2.0, 4.0, 8.0]   # gamma = mult / n_features (features are standardized)
 
 
 def load(tag):

@@ -68,8 +68,13 @@ class StudentNet(nn.Module):
         return self.pool(self.blocks(self.stem(x))).flatten(1)
 
 
+def all_sizes():
+    """Required sizes (config.SIZES) + optional extension sizes (config.EXTRA_SIZES)."""
+    return {**C.SIZES, **getattr(C, "EXTRA_SIZES", {})}
+
+
 def build_student(size):
-    return StudentNet(C.SIZES[size]).to(memory_format=torch.channels_last)
+    return StudentNet(all_sizes()[size]).to(memory_format=torch.channels_last)
 
 
 def vicreg_projector(in_dim, hidden=C.PROJ_HIDDEN, out=C.VICREG_OUT):

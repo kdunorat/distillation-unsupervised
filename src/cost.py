@@ -14,7 +14,7 @@ from torch.utils.flop_counter import FlopCounterMode
 
 from . import config as C
 from .common import AMP_DTYPE, DEVICE, autocast
-from .models import build_student, load_teacher, n_params
+from .models import all_sizes, build_student, load_teacher, n_params
 
 LAT_BATCH, LAT_WARMUP, LAT_ITERS = 128, 10, 50
 
@@ -47,7 +47,7 @@ def latency_ms(model, size):
 
 def main():
     rows = []
-    encs = [(f"student_{s}", build_student(s), C.IMG_SIZE) for s in C.SIZES]
+    encs = [(f"student_{s}", build_student(s), C.IMG_SIZE) for s in all_sizes()]
     teacher, *_ = load_teacher()
     encs.append(("teacher", teacher, C.TEACHER_SIZE))
     for name, m, size in encs:

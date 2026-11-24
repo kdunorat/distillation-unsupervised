@@ -27,9 +27,11 @@ from . import config as C
 CLASSES = ["adipose", "background", "debris", "lymphocytes", "mucus", "smooth muscle",
            "normal mucosa", "cancer stroma", "adenocarcinoma"]
 # categorical slots (validated palette), fixed order; ink colors for text
-ROW_COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a", "D": "#eda100"}
-ROW_MARK = {"A": "o", "B": "s", "C": "^", "D": "D"}
-ROW_NAME = {"A": "A random", "B": "B direct (VICReg)", "C": "C distilled", "D": "D teacher"}
+ROW_COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a", "D": "#eda100", "P": "#8a8a85"}
+ROW_MARK = {"A": "o", "B": "s", "C": "^", "D": "D", "P": "x"}
+ROW_NAME = {"A": "A random", "B": "B direct (VICReg)", "C": "C distilled", "D": "D teacher",
+            "P": "P raw pixels (extension)"}
+REF_ROWS = ("D", "P")          # size-independent rows, drawn in every panel
 FRAC_RAMP = {0.01: "#0d366b", 0.10: "#1c5cab", 0.50: "#2a78d6", 1.00: "#6da7ec"}
 CLASS_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300",
                 "#6250d6", "#e34948", "#8a8a85"]
@@ -104,26 +106,33 @@ def main_table(s, cl):
 
 
 def fig_label_efficiency(s):
-    sizes = [z for z in C.SIZES if z in set(s["size"])]
+    from .models import all_sizes
+    order = sorted(all_sizes(), key=all_sizes().get)          # by width multiplier
+    sizes = [z for z in order if z in set(s["size"])]
     fig, axes = plt.subplots(1, len(sizes), figsize=(5.2 * len(sizes), 4), sharey=True,
                              squeeze=False)
     for ax, size in zip(axes[0], sizes):
-        for row in "ABCD":
+        for row in "PABCD":
             t = s[(s.probe == "linear") & (s.row == row) & (s.data_frac == 1.0)
-                  & ((s["size"] == size) if row != "D" else True)].sort_values("label_frac")
+                  & ((s["size"] == size) if row not in REF_ROWS else True)].sort_values("label_frac")
             if t.empty:
                 continue
             ax.errorbar(t.label_frac, 100 * t["mean"], yerr=100 * t["std"].fillna(0),
                         color=ROW_COLOR[row], marker=ROW_MARK[row], ms=6, lw=2,
                         capsize=3, label=ROW_NAME[row],
-                        ls="--" if row == "D" else "-")
+                        ls="--" if row == "D" else (":" if row == "P" else "-"))
         ax.set_xscale("log")
         ax.set_xticks(C.LABEL_FRACS, [f"{int(f * 100)}%" for f in C.LABEL_FRACS])
         ax.set_title(f"student {size}", color=INK)
         ax.set_xlabel("labeled fraction of the training split", color=INK)
         style(ax)
     axes[0][0].set_ylabel("linear SVM test accuracy (%)", color=INK)
-    axes[0][-1].legend(frameon=False, loc="lower right")
+    hl = {}
+    for ax in axes[0]:                       # legend = union of rows over all panels
+        for h, l in zip(*ax.get_legend_handles_labels()):
+            hl.setdefault(l, h)
+    order = [ROW_NAME[r] for r in "PABCD" if ROW_NAME[r] in hl]
+    axes[0][-1].legend([hl[l] for l in order], order, frameon=False, loc="lower right")
     fig.tight_layout()
     fig.savefig(C.FIGS / "label_efficiency.png", dpi=200)
     plt.close(fig)
@@ -144,10 +153,10 @@ def fig_gap_vs_params(gap):
             continue
         ax.errorbar(t.params, 100 * t["mean"], yerr=100 * t["std"].fillna(0), color=col,
                     marker="o", ms=6, lw=2, capsize=3, label=f"{int(frac * 100)}% labels")
-        ax.annotate(f"{int(frac * 100)}%", (t.params.iloc[-1], 100 * t["mean"].iloc[-1]),
-                    xytext=(6, 0), textcoords="offset points", va="center", color=INK,
-                    fontsize=9)
     ax.set_xscale("log")
+    ticks = g.drop_duplicates("size").sort_values("params")
+    ax.set_xticks(ticks.params, [f"{z}\n{p:.1f}M" for z, p in zip(ticks["size"], ticks.params)])
+    ax.minorticks_off()
     ax.set_xlabel("student parameters (M)", color=INK)
     ax.set_ylabel("C − B, linear SVM accuracy (pp)", color=INK)
     ax.legend(frameon=False)

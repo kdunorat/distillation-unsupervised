@@ -175,7 +175,7 @@ def train(row, size, seed, data_frac=1.0, epochs=None, batch=None, lr=None, wd=N
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--row", choices=["B", "C"], required=True)
-    ap.add_argument("--size", choices=list(C.SIZES), required=True)
+    ap.add_argument("--size", required=True, help="S, L (or an EXTRA_SIZES key)")
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--data-frac", type=float, default=1.0)
     ap.add_argument("--epochs", type=int, default=C.EPOCHS)

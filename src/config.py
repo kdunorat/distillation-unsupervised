@@ -47,6 +47,8 @@ BASE_WIDTHS = (32, 64, 128, 256)
 DEPTHS = (2, 2, 2, 2)
 SIZES = {"S": 0.5, "L": 1.5}
 SEEDS = {"S": [0, 1, 2], "L": [0, 1]}
+EXTRA_SIZES = {"M": 1.0, "XL": 1.8}
+EXTRA_SEEDS = {"M": [0, 1], "XL": [0, 1]}
 STUDENT_MEAN = (0.485, 0.456, 0.406)       # ImageNet stats, same for every student
 STUDENT_STD = (0.229, 0.224, 0.225)
 

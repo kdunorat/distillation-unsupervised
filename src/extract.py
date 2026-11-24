@@ -19,11 +19,17 @@ from . import config as C
 from .common import DEVICE, seed_everything
 from .data import load_split, probe_pool
 from .diag import diagnose, encode
+import torch.nn as nn
+
 from .models import build_student, load_teacher
+
+PIXEL_SIZE = 32   # row P: raw pixels, resized to 32x32 and flattened (3072-d)
 
 
 def get_encoder(row, size=None, seed=None, data_frac=1.0):
     """Returns (model, input_size, mean, std)."""
+    if row == "P":                                  # no encoder: raw pixels
+        return nn.Flatten().to(DEVICE), PIXEL_SIZE, C.STUDENT_MEAN, C.STUDENT_STD
     if row == "D":
         m, mean, std, _ = load_teacher()
         return m.to(DEVICE), C.TEACHER_SIZE, mean, std
@@ -39,7 +45,7 @@ def get_encoder(row, size=None, seed=None, data_frac=1.0):
 
 
 def extract(row, size=None, seed=None, data_frac=1.0, force=False):
-    t = C.tag(row, size, seed, data_frac)
+    t = row if row == "P" else C.tag(row, size, seed, data_frac)
     path = C.FEATS / f"{t}.npz"
     if path.exists() and not force:
         print(f"[extract] {t} cached"); return path
@@ -53,7 +59,7 @@ def extract(row, size=None, seed=None, data_frac=1.0, force=False):
     np.savez(path, train=f_tr.astype(np.float32), y_train=y_tr[pool],
              test=f_te.astype(np.float32), y_test=y_te)
     print(f"[extract] {t}: train {f_tr.shape} test {f_te.shape} -> {path.name}")
-    if row in ("D", "A"):
+    if row in ("D", "A", "P"):
         d = diagnose(f_tr, y_tr[pool], f_te, y_te)
         print(f"[sanity] {t}: {json.dumps(d)}")
         (C.RESULTS / f"sanity_{t}.json").write_text(json.dumps(d, indent=2))
@@ -62,8 +68,10 @@ def extract(row, size=None, seed=None, data_frac=1.0, force=False):
 
 def all_encoders():
     jobs = [("D", None, None, 1.0)]
-    for size, seeds in C.SEEDS.items():
+    for size, seeds in {**C.SEEDS, **getattr(C, "EXTRA_SEEDS", {})}.items():
         jobs += [("A", size, s, 1.0) for s in seeds]
+    if (C.FEATS / "P.npz").exists():
+        jobs.append(("P", None, None, 1.0))
     for run in sorted(C.RUNS.iterdir()):
         if (run / "backbone.pt").exists():
             p = C.parse_tag(run.name)
@@ -73,8 +81,8 @@ def all_encoders():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--row", choices=["A", "B", "C", "D"])
-    ap.add_argument("--size", choices=list(C.SIZES))
+    ap.add_argument("--row", choices=["A", "B", "C", "D", "P"])
+    ap.add_argument("--size")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--data-frac", type=float, default=1.0)
     ap.add_argument("--all", action="store_true")
