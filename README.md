@@ -17,7 +17,7 @@ teacher has not seen these images.
 ```bash
 pip install -r requirements.txt      # keeps your existing torch/torchvision
 # dataset (4.3 GB) -> data/pathmnist_128.npz
-python -c "from medmnist import PathMNIST; PathMNIST(split='train', size=128, download=True, root='data')"
+mkdir -p data && python -c "from medmnist import PathMNIST; PathMNIST(split='train', size=128, download=True, root='data')"
 ```
 
 ## Run

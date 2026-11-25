@@ -1,0 +1,9 @@
+data/
+cache/
+runs/
+features/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.idea/
+*.zip

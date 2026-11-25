@@ -1,0 +1,9 @@
+{
+  "selected_on": "B_S_s0_d100",
+  "n_cv": 10000,
+  "linear_C": 0.1,
+  "linear_cv_acc": 0.8993002479612088,
+  "rbf_C": 1.0,
+  "rbf_gamma_mult": 2.0,
+  "rbf_cv_acc": 0.9090000181781827
+}

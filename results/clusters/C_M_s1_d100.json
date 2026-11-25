@@ -1,0 +1,10 @@
+{
+  "tag": "C_M_s1_d100",
+  "row": "C",
+  "size": "M",
+  "seed": 1,
+  "data_frac": 1.0,
+  "feat_dim": 256,
+  "kmeans_nmi": 0.8360114565507407,
+  "kmeans_ari": 0.8030551647339264
+}

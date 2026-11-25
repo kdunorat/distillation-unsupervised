@@ -1,0 +1,10 @@
+{
+  "tag": "P",
+  "row": "P",
+  "size": null,
+  "seed": null,
+  "data_frac": 1.0,
+  "feat_dim": 3072,
+  "kmeans_nmi": 0.4792437121530211,
+  "kmeans_ari": 0.37726408150241736
+}
