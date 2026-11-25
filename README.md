@@ -1,6 +1,6 @@
 # Distilling Unsupervised Representations into Small Models — PathMNIST
 
-Controlled, budget-matched comparison (MO433 project):
+Controlled, budget-matched comparison:
 
 | Row | Encoder | Notes |
 |---|---|---|
