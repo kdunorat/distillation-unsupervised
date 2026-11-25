@@ -84,6 +84,63 @@ def clusters():
     return g.reset_index().round(3)
 
 
+# DINO ViT-S/16 pretraining cost (Caron et al., 2021, Table 8: two 8-GPU machines,
+# 2x224^2 + 10x96^2 multi-crop). 300 epochs = 72.6 h wall-clock x 16 GPUs. The released
+# checkpoint (77.0% linear) is the 800-epoch run, extrapolated linearly from that row.
+TEACHER_PRETRAIN_GPU_H = {"300ep_table8": 72.6 * 16, "800ep_extrapolated": 72.6 * 16 * 800 / 300}
+
+
+def per_seed_table(df):
+    """Required for the 2-seed students (statement 2.1): individual runs, linear probe,
+    mean over the 3 labeled draws, plus the paired C - B gap per seed."""
+    d = df[(df.probe == "linear") & df.row.isin(["B", "C"])].copy()
+    acc = (d.groupby(["size", "data_frac", "row", "seed", "label_frac"]).acc.mean()
+           .mul(100).round(2).unstack("label_frac"))
+    acc.columns = [f"acc_{int(c * 100)}%" for c in acc.columns]
+    acc.to_csv(C.RESULTS / "per_seed_linear.csv")
+    key = ["size", "data_frac", "seed", "label_frac", "draw"]
+    gap = (d[d.row == "C"].set_index(key).acc - d[d.row == "B"].set_index(key).acc)
+    gap = (gap.groupby(["size", "data_frac", "seed", "label_frac"]).mean().mul(100)
+           .round(2).unstack("label_frac"))
+    gap.columns = [f"gap_{int(c * 100)}%" for c in gap.columns]
+    gap.to_csv(C.RESULTS / "per_seed_gap.csv")
+    return acc, gap
+
+
+def worth_it(s):
+    """Accuracy vs. GPU-hours, with and without the teacher's published pretraining
+    (statement 1 and 6.3). Linear probe, 100% unlabeled data, 1% and 100% labels."""
+    p = C.RESULTS / "cost_runs.csv"
+    if not p.exists():
+        return None
+    r = pd.read_csv(p)
+    cache = float(r.loc[r.name == "teacher_forward_cache", "train_gpu_hours"].sum())
+    runs = r[r.row.isin(["B", "C"])]
+    n_c = int((runs.row == "C").sum())
+    h = runs[runs.data_frac == 1.0].groupby(["row", "size"]).train_gpu_hours.mean()
+    lin = s[(s.probe == "linear") & (s.data_frac == 1.0)]
+    rows = []
+    for (row, size), gh in h.items():
+        for lf in (0.01, 1.0):
+            acc = lin[(lin.row == row) & (lin["size"] == size) & (lin.label_frac == lf)]["mean"]
+            a = lin[(lin.row == "A") & (lin["size"] == size) & (lin.label_frac == lf)]["mean"]
+            if acc.empty:
+                continue
+            own = gh + (cache / n_c if row == "C" else 0.0)       # cache amortized over C runs
+            out = {"row": row, "size": size, "label_frac": lf,
+                   "acc": 100 * acc.iloc[0], "gain_over_A_pp": 100 * (acc.iloc[0] - a.iloc[0]),
+                   "gpu_h_student": own}
+            for k, v in TEACHER_PRETRAIN_GPU_H.items():
+                tot = own + (v if row == "C" else 0.0)
+                out[f"gpu_h_total_{k}"] = tot
+                out[f"pp_per_gpu_h_{k}"] = out["gain_over_A_pp"] / tot
+            out["pp_per_gpu_h_student_only"] = out["gain_over_A_pp"] / own
+            rows.append(out)
+    w = pd.DataFrame(rows).sort_values(["label_frac", "size", "row"]).round(4)
+    w.to_csv(C.RESULTS / "worth_it.csv", index=False)
+    return w
+
+
 def main_table(s, cl):
     cost = pd.read_csv(C.RESULTS / "cost_models.csv") if (C.RESULTS / "cost_models.csv").exists() else None
     lines = []
@@ -244,6 +301,8 @@ def run(proj="umap", proj_size="S"):
     s = summarize(df)
     gap = paired_gap(df)
     main_table(s, clusters())
+    per_seed_table(df)
+    worth_it(s)
     collapse_table()
     fig_label_efficiency(s)
     fig_gap_vs_params(gap)
